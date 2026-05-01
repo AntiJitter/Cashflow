@@ -59,16 +59,16 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 }
 
 export const CATEGORY_COLORS: Record<Category, string> = {
-  salary: '#22c55e',
-  freelance: '#86efac',
-  investment: '#4ade80',
-  housing: '#f87171',
-  utilities: '#fb923c',
-  subscriptions: '#c084fc',
-  health: '#38bdf8',
-  transport: '#fbbf24',
-  food: '#f472b6',
-  other: '#94a3b8',
+  salary: '#30D158',
+  freelance: '#34C759',
+  investment: '#32ADE6',
+  housing: '#FF453A',
+  utilities: '#FF9F0A',
+  subscriptions: '#BF5AF2',
+  health: '#64D2FF',
+  transport: '#FFD60A',
+  food: '#FF375F',
+  other: '#8E8E93',
 }
 
 export const RECURRING_LABELS: Record<RecurringPattern, string> = {

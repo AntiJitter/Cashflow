@@ -71,14 +71,15 @@ function Section({
 
   return (
     <div>
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: '#636366' }}>
         {title}
       </h3>
       <div className="space-y-1.5">
         {items.map((tx) => (
           <div
             key={tx.id}
-            className="group flex items-center gap-3 rounded-xl bg-slate-800 px-3 py-2.5 hover:bg-slate-750 transition-colors"
+            className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
+            style={{ background: '#2C2C2E' }}
           >
             <div
               className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
@@ -86,28 +87,33 @@ function Section({
             />
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium text-white">{tx.name}</div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs" style={{ color: '#636366' }}>
                 {CATEGORY_LABELS[tx.category]} · {RECURRING_LABELS[tx.recurringPattern]}
               </div>
             </div>
             <div
-              className={`text-sm font-semibold tabular-nums ${
-                tx.type === 'income' ? 'text-emerald-400' : 'text-red-400'
-              }`}
+              className="text-sm font-semibold tabular-nums"
+              style={{ color: tx.type === 'income' ? '#30D158' : '#FF453A' }}
             >
-              {tx.type === 'income' ? '+' : '-'}
+              {tx.type === 'income' ? '+' : '−'}
               {formatCurrency(tx.amount, currency)}
             </div>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() => onEdit(tx)}
-                className="rounded p-1 text-slate-400 hover:text-white transition-colors"
+                className="rounded p-1 transition-colors"
+                style={{ color: '#636366' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#FFFFFF' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#636366' }}
               >
                 <Pencil size={13} />
               </button>
               <button
                 onClick={() => onRemove(tx.id)}
-                className="rounded p-1 text-slate-400 hover:text-red-400 transition-colors"
+                className="rounded p-1 transition-colors"
+                style={{ color: '#636366' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#FF453A' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#636366' }}
               >
                 <Trash2 size={13} />
               </button>

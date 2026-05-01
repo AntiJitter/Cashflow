@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useCallback } from 'react'
 import {
   ComposedChart,
   Bar,
@@ -7,7 +7,7 @@ import {
   Tooltip,
   ReferenceLine,
   Area,
-  ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts'
 import { addDays, startOfDay, subDays, format } from 'date-fns'
 import { Transaction, DayData, CATEGORY_COLORS } from '../types'
@@ -15,9 +15,15 @@ import { generateDayData, formatCurrency } from '../utils/cashflow'
 
 const DAYS_BACK = 60
 const DAYS_FORWARD = 150
-const PX_PER_DAY = 38
-const CHART_HEIGHT_TOP = 200
-const CHART_HEIGHT_BOTTOM = 130
+const PX_PER_DAY = 44
+const CHART_HEIGHT_TOP = 220
+const CHART_HEIGHT_BOTTOM = 150
+
+// Apple HIG colors
+const C_INCOME = '#30D158'
+const C_EXPENSE = '#FF453A'
+const C_BALANCE = '#0A84FF'
+const C_TODAY_LINE = '#0A84FF'
 
 interface Props {
   transactions: Transaction[]
@@ -25,72 +31,83 @@ interface Props {
   currency: string
 }
 
-interface CustomTickProps {
+interface TickProps {
   x?: number
   y?: number
   payload?: { value: string }
   data: DayData[]
 }
 
-function CustomXTick({ x = 0, y = 0, payload, data }: CustomTickProps) {
+function DayTick({ x = 0, y = 0, payload, data }: TickProps) {
   const day = data.find((d) => d.label === payload?.value)
   if (!day) return null
 
-  const isMonthStart = day.isMonthStart
-  const isToday = day.isToday
+  const num = parseInt(payload?.value ?? '0')
+  const showLabel = day.isMonthStart || day.isToday || num % 7 === 0
 
-  if (isToday) {
+  if (day.isToday) {
     return (
       <g transform={`translate(${x},${y})`}>
-        <circle cx={0} cy={-CHART_HEIGHT_TOP - 8} r={3} fill="#60a5fa" />
-        <text x={0} y={5} textAnchor="middle" fill="#60a5fa" fontSize={10} fontWeight="bold">
+        <rect x={-14} y={2} width={28} height={16} rx={8} fill={`${C_TODAY_LINE}22`} />
+        <text x={0} y={13} textAnchor="middle" fill={C_TODAY_LINE} fontSize={10} fontWeight="700">
           {payload?.value}
         </text>
       </g>
     )
   }
 
-  if (isMonthStart) {
+  if (day.isMonthStart) {
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={0} y={5} textAnchor="middle" fill="#64748b" fontSize={9}>
-          {payload?.value}
+        <line x1={0} y1={0} x2={0} y2={4} stroke="#3A3A3C" strokeWidth={1} />
+        <text x={0} y={14} textAnchor="middle" fill="#636366" fontSize={9} fontWeight="600">
+          1
         </text>
       </g>
     )
   }
-
-  // Only show every 5th day to avoid crowding
-  const dayNum = parseInt(payload?.value ?? '0')
-  if (dayNum % 5 !== 0) return null
 
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={5} textAnchor="middle" fill="#475569" fontSize={9}>
-        {payload?.value}
-      </text>
+      <line x1={0} y1={0} x2={0} y2={3} stroke="#3A3A3C" strokeWidth={1} />
+      {showLabel && (
+        <text x={0} y={13} textAnchor="middle" fill="#48484A" fontSize={9}>
+          {payload?.value}
+        </text>
+      )}
     </g>
   )
 }
 
-interface CustomTooltipProps {
+interface TooltipProps {
   active?: boolean
   label?: string
   data: DayData[]
   currency: string
 }
 
-function CustomTooltip({ active, label, data, currency }: CustomTooltipProps) {
+function DayTooltip({ active, label, data, currency }: TooltipProps) {
   if (!active || !label) return null
   const day = data.find((d) => d.label === label)
   if (!day || (day.income === 0 && day.expense === 0)) return null
 
   return (
-    <div className="rounded-xl border border-slate-600 bg-slate-800/95 p-3 shadow-xl backdrop-blur-sm min-w-48">
-      <div className="mb-2 text-xs font-semibold text-slate-300">
+    <div
+      style={{
+        background: 'rgba(28,28,30,0.95)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+      className="rounded-2xl p-3.5 shadow-2xl min-w-52"
+    >
+      <div className="mb-2.5 text-xs font-semibold" style={{ color: '#EBEBF5CC' }}>
         {format(new Date(day.dateStr + 'T12:00:00'), 'EEE d MMM yyyy')}
         {day.isToday && (
-          <span className="ml-2 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-blue-400">
+          <span
+            className="ml-2 rounded-full px-1.5 py-0.5 text-[10px]"
+            style={{ background: `${C_TODAY_LINE}25`, color: C_TODAY_LINE }}
+          >
             Today
           </span>
         )}
@@ -98,24 +115,29 @@ function CustomTooltip({ active, label, data, currency }: CustomTooltipProps) {
       {day.entries.map((e, i) => (
         <div key={i} className="flex items-center gap-2 text-xs py-0.5">
           <div
-            className="h-2 w-2 rounded-full flex-shrink-0"
+            className="h-2 w-2 flex-shrink-0 rounded-full"
             style={{ backgroundColor: CATEGORY_COLORS[e.category] }}
           />
-          <span className="text-slate-300 flex-1">{e.name}</span>
+          <span className="flex-1" style={{ color: '#EBEBF599' }}>
+            {e.name}
+          </span>
           <span
-            className={`font-semibold tabular-nums ${
-              e.type === 'income' ? 'text-emerald-400' : 'text-red-400'
-            }`}
+            className="font-semibold tabular-nums"
+            style={{ color: e.type === 'income' ? C_INCOME : C_EXPENSE }}
           >
-            {e.type === 'income' ? '+' : '-'}
+            {e.type === 'income' ? '+' : '−'}
             {formatCurrency(e.amount, currency)}
           </span>
         </div>
       ))}
-      <div className="mt-2 border-t border-slate-700 pt-2 flex justify-between text-xs">
-        <span className="text-slate-400">Balance after</span>
+      <div
+        className="mt-2.5 flex justify-between pt-2.5 text-xs"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <span style={{ color: '#636366' }}>Balance after</span>
         <span
-          className={`font-bold tabular-nums ${day.balance >= 0 ? 'text-white' : 'text-red-400'}`}
+          className="font-bold tabular-nums"
+          style={{ color: day.balance >= 0 ? '#FFFFFF' : C_EXPENSE }}
         >
           {formatCurrency(day.balance, currency)}
         </span>
@@ -126,37 +148,78 @@ function CustomTooltip({ active, label, data, currency }: CustomTooltipProps) {
 
 interface MonthBandProps {
   data: DayData[]
-  totalWidth: number
 }
 
-function MonthBands({ data, totalWidth: _totalWidth }: MonthBandProps) {
-  const months: { label: string; startIdx: number; endIdx: number }[] = []
+function MonthBands({ data }: MonthBandProps) {
+  const months: { label: string; count: number }[] = []
 
-  data.forEach((d, i) => {
-    if (d.isMonthStart || i === 0) {
-      if (months.length > 0) months[months.length - 1].endIdx = i - 1
-      months.push({ label: d.monthLabel, startIdx: i, endIdx: data.length - 1 })
+  data.forEach((d) => {
+    if (d.isMonthStart || months.length === 0) {
+      months.push({ label: d.monthLabel, count: 1 })
+    } else {
+      months[months.length - 1].count++
     }
   })
 
   return (
-    <div className="relative flex" style={{ height: 28 }}>
+    <div className="flex flex-shrink-0" style={{ height: 32 }}>
       {months.map((m, idx) => {
-        const width = (m.endIdx - m.startIdx + 1) * PX_PER_DAY
+        const width = m.count * PX_PER_DAY
         const isEven = idx % 2 === 0
         return (
           <div
             key={m.label}
-            className={`flex flex-shrink-0 items-center border-r border-slate-700/50 px-2 ${
-              isEven ? 'bg-slate-800/30' : 'bg-slate-900/30'
-            }`}
-            style={{ width }}
+            className="flex flex-shrink-0 items-center px-3"
+            style={{
+              width,
+              borderRight: '1px solid rgba(255,255,255,0.06)',
+              background: isEven ? 'rgba(255,255,255,0.025)' : 'transparent',
+            }}
           >
-            <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">{m.label}</span>
+            <span
+              className="text-xs font-semibold whitespace-nowrap"
+              style={{ color: '#8E8E93' }}
+            >
+              {m.label}
+            </span>
           </div>
         )
       })}
     </div>
+  )
+}
+
+// SVG overlay: alternating day columns + today highlight
+interface DayColumnsProps {
+  data: DayData[]
+  width?: number
+  height?: number
+}
+
+function DayColumns({ data, width = 0, height = 0 }: DayColumnsProps) {
+  if (!width || !height) return null
+  const colW = width / data.length
+
+  return (
+    <g>
+      {data.map((day, i) => {
+        if (!day.isToday && !day.isWeekend) return null
+        return (
+          <rect
+            key={day.dateStr}
+            x={i * colW}
+            y={0}
+            width={colW}
+            height={height}
+            fill={
+              day.isToday
+                ? `${C_TODAY_LINE}12`
+                : 'rgba(255,255,255,0.018)'
+            }
+          />
+        )
+      })}
+    </g>
   )
 }
 
@@ -166,8 +229,7 @@ export function Timeline({ transactions, initialBalance, currency }: Props) {
 
   const windowStart = subDays(today, DAYS_BACK)
   const windowEnd = addDays(today, DAYS_FORWARD)
-  const totalDays = DAYS_BACK + DAYS_FORWARD + 1
-  const totalWidth = totalDays * PX_PER_DAY
+  const totalWidth = (DAYS_BACK + DAYS_FORWARD + 1) * PX_PER_DAY
 
   const dayData = useMemo(
     () => generateDayData(transactions, windowStart, windowEnd, initialBalance, today),
@@ -175,54 +237,68 @@ export function Timeline({ transactions, initialBalance, currency }: Props) {
     [transactions, initialBalance],
   )
 
-  // Balance data uses full range but maps to same x positions
-  const balanceData = dayData.map((d) => ({ ...d, expenseNeg: d.expense > 0 ? -d.expense : 0 }))
+  const chartData = dayData.map((d) => ({
+    ...d,
+    expenseNeg: d.expense > 0 ? -d.expense : 0,
+  }))
 
+  // Auto-scroll to today
   useEffect(() => {
     if (containerRef.current) {
       const todayOffset = DAYS_BACK * PX_PER_DAY
-      const halfView = containerRef.current.clientWidth / 2
-      containerRef.current.scrollLeft = todayOffset - halfView + PX_PER_DAY / 2
+      const half = containerRef.current.clientWidth / 2
+      containerRef.current.scrollLeft = todayOffset - half + PX_PER_DAY / 2
     }
   }, [])
+
+  // Wheel → horizontal scroll
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault()
+    if (containerRef.current) {
+      containerRef.current.scrollLeft += e.deltaY * 1.5
+    }
+  }, [])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => el.removeEventListener('wheel', handleWheel)
+  }, [handleWheel])
 
   const todayIndex = dayData.findIndex((d) => d.isToday)
 
   const minBalance = Math.min(...dayData.map((d) => d.balance))
   const maxBalance = Math.max(...dayData.map((d) => d.balance))
-  const balancePadding = Math.max((maxBalance - minBalance) * 0.1, 500)
+  const balancePad = Math.max((maxBalance - minBalance) * 0.12, 500)
+  const maxBar = Math.max(...dayData.map((d) => Math.max(d.income, d.expense)), 100)
 
-  const maxBarValue = Math.max(...dayData.map((d) => Math.max(d.income, d.expense)), 100)
+  const customDayColumns = (props: object) => <DayColumns {...(props as DayColumnsProps)} data={dayData} />
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col" style={{ background: '#111113' }}>
       <div
         ref={containerRef}
-        className="overflow-x-auto flex-1 select-none"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: '#334155 transparent' }}
+        className="flex-1 overflow-x-auto overflow-y-hidden select-none"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: '#3A3A3C transparent' }}
       >
-        <div style={{ width: totalWidth, minHeight: '100%' }} className="flex flex-col">
-          {/* Month labels */}
-          <MonthBands data={dayData} totalWidth={totalWidth} />
+        <div style={{ width: totalWidth, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Month header */}
+          <MonthBands data={dayData} />
 
-          {/* Today marker line */}
+          {/* Today line */}
           {todayIndex >= 0 && (
-            <div className="relative" style={{ height: 0 }}>
+            <div className="relative" style={{ height: 0, zIndex: 10, pointerEvents: 'none' }}>
               <div
-                className="absolute top-0 z-10"
                 style={{
+                  position: 'absolute',
                   left: todayIndex * PX_PER_DAY + PX_PER_DAY / 2 - 0.5,
+                  top: 0,
                   width: 1,
-                  height: CHART_HEIGHT_TOP + CHART_HEIGHT_BOTTOM + 8,
-                  background: 'linear-gradient(to bottom, #60a5fa88, #60a5fa22)',
-                  pointerEvents: 'none',
+                  height: CHART_HEIGHT_TOP + CHART_HEIGHT_BOTTOM,
+                  background: `linear-gradient(to bottom, ${C_TODAY_LINE}99, ${C_TODAY_LINE}11)`,
                 }}
               />
-              <div
-                className="absolute z-10 -translate-x-1/2 px-1.5 py-0.5 rounded text-blue-400 text-xs font-bold"
-                style={{ left: todayIndex * PX_PER_DAY + PX_PER_DAY / 2, top: 0 }}
-              >
-              </div>
             </div>
           )}
 
@@ -230,109 +306,133 @@ export function Timeline({ transactions, initialBalance, currency }: Props) {
           <ComposedChart
             width={totalWidth}
             height={CHART_HEIGHT_TOP}
-            data={balanceData}
-            margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-            syncId="cashflow"
+            data={chartData}
+            margin={{ top: 12, right: 0, left: 0, bottom: 0 }}
+            syncId="cf"
           >
+            <CartesianGrid
+              vertical={true}
+              horizontal={false}
+              stroke="rgba(255,255,255,0.04)"
+              strokeWidth={1}
+            />
             <XAxis
               dataKey="label"
-              tick={(props) => <CustomXTick {...props} data={dayData} />}
+              tick={(props) => <DayTick {...props} data={dayData} />}
               tickLine={false}
-              axisLine={{ stroke: '#1e293b' }}
-              height={18}
+              axisLine={false}
+              height={20}
+              interval={0}
             />
-            <YAxis
-              domain={[-maxBarValue * 1.15, maxBarValue * 1.15]}
-              hide
-            />
-            <ReferenceLine y={0} stroke="#334155" strokeWidth={1} />
+            <YAxis domain={[-maxBar * 1.2, maxBar * 1.2]} hide />
+            <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
             <Tooltip
               content={(props) => (
-                <CustomTooltip
+                <DayTooltip
                   active={props.active}
                   label={props.label}
                   data={dayData}
                   currency={currency}
                 />
               )}
-              cursor={{ fill: '#ffffff08' }}
+              cursor={{ fill: 'rgba(255,255,255,0.04)', radius: 4 }}
             />
+            {/* @ts-expect-error recharts customized */}
+            <CartesianGrid customized={customDayColumns} />
             <Bar
               dataKey="income"
-              fill="#22c55e"
-              opacity={0.85}
-              radius={[3, 3, 0, 0]}
-              maxBarSize={PX_PER_DAY - 8}
+              fill={C_INCOME}
+              opacity={0.9}
+              radius={[4, 4, 1, 1]}
+              maxBarSize={PX_PER_DAY - 12}
             />
             <Bar
               dataKey="expenseNeg"
-              fill="#ef4444"
-              opacity={0.8}
-              radius={[0, 0, 3, 3]}
-              maxBarSize={PX_PER_DAY - 8}
+              fill={C_EXPENSE}
+              opacity={0.85}
+              radius={[1, 1, 4, 4]}
+              maxBarSize={PX_PER_DAY - 12}
             />
           </ComposedChart>
 
-          {/* Balance area chart */}
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', flexShrink: 0 }} />
+
+          {/* Balance area */}
           <ComposedChart
             width={totalWidth}
             height={CHART_HEIGHT_BOTTOM}
-            data={balanceData}
-            margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-            syncId="cashflow"
+            data={chartData}
+            margin={{ top: 8, right: 0, left: 0, bottom: 8 }}
+            syncId="cf"
           >
+            <CartesianGrid
+              vertical={true}
+              horizontal={false}
+              stroke="rgba(255,255,255,0.04)"
+              strokeWidth={1}
+            />
             <XAxis dataKey="label" hide />
-            <YAxis
-              domain={[minBalance - balancePadding, maxBalance + balancePadding]}
-              hide
+            <YAxis domain={[minBalance - balancePad, maxBalance + balancePad]} hide />
+            <ReferenceLine
+              y={0}
+              stroke={`${C_EXPENSE}55`}
+              strokeDasharray="3 4"
+              strokeWidth={1}
             />
-            <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1} opacity={0.5} />
-            <Tooltip
-              content={() => null}
-              cursor={false}
-            />
+            <Tooltip content={() => null} cursor={false} />
             <defs>
-              <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#60a5fa" stopOpacity={0.02} />
+              <linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={C_BALANCE} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={C_BALANCE} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <Area
               type="monotone"
               dataKey="balance"
-              stroke="#60a5fa"
-              strokeWidth={2}
-              fill="url(#balanceGradient)"
+              stroke={C_BALANCE}
+              strokeWidth={2.5}
+              fill="url(#balGrad)"
               dot={false}
-              activeDot={{ r: 4, fill: '#60a5fa', stroke: '#1e293b', strokeWidth: 2 }}
+              activeDot={{
+                r: 5,
+                fill: C_BALANCE,
+                stroke: '#1C1C1E',
+                strokeWidth: 2,
+              }}
             />
           </ComposedChart>
 
           {/* Legend */}
-          <div className="flex items-center gap-4 px-4 py-2 text-xs text-slate-500">
-            <div className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-sm bg-emerald-500 opacity-85" />
-              Income
+          <div
+            className="flex flex-shrink-0 items-center gap-5 px-5 py-2"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+          >
+            <LegendItem color={C_INCOME} label="Income" />
+            <LegendItem color={C_EXPENSE} label="Expenses" />
+            <div className="flex items-center gap-2">
+              <div style={{ height: 2, width: 20, borderRadius: 1, background: C_BALANCE }} />
+              <span className="text-xs" style={{ color: '#636366' }}>
+                Balance
+              </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-2.5 w-2.5 rounded-sm bg-red-500 opacity-80" />
-              Expenses
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="h-0.5 w-5 rounded bg-blue-400" />
-              Balance
-            </div>
+            <span className="ml-auto text-xs" style={{ color: '#3A3A3C' }}>
+              scroll or use mouse wheel →
+            </span>
           </div>
         </div>
-      </div>
-
-      {/* Scroll hint */}
-      <div className="flex justify-center pb-1 pt-0.5">
-        <span className="text-xs text-slate-600">← scroll to explore →</span>
       </div>
     </div>
   )
 }
 
-// Needed for recharts ResponsiveContainer usage
-export { ResponsiveContainer }
+function LegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div style={{ height: 10, width: 10, borderRadius: 3, background: color }} />
+      <span className="text-xs" style={{ color: '#636366' }}>
+        {label}
+      </span>
+    </div>
+  )
+}

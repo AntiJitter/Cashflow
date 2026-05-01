@@ -18,7 +18,7 @@ body,
     'Segoe UI',
     system-ui,
     sans-serif;
-  background-color: #0f172a;
+  background-color: #111113;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -33,12 +33,12 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #3A3A3C;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #48484A;
 }
 
 /* Remove number input arrows */

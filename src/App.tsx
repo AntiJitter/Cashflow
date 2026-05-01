@@ -45,27 +45,39 @@ export default function App() {
   const hasData = transactions.length > 0
 
   return (
-    <div className="flex h-screen flex-col bg-slate-900 text-white overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden" style={{ background: '#111113', color: '#FFFFFF' }}>
       {/* Header */}
-      <header className="flex flex-shrink-0 items-center justify-between border-b border-slate-800 px-6 py-3.5">
+      <header
+        className="flex flex-shrink-0 items-center justify-between px-6 py-3.5"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(28,28,30,0.9)' }}
+      >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-lg"
+            style={{ background: '#0A84FF' }}
+          >
             <BarChart3 size={15} className="text-white" />
           </div>
-          <span className="text-base font-bold tracking-tight text-white">CashFlow</span>
+          <span className="text-base font-bold tracking-tight">CashFlow</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowBalanceModal(true)}
-            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition-colors"
+            style={{ color: '#8E8E93' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#8E8E93'; e.currentTarget.style.background = 'transparent' }}
           >
             <Settings size={14} />
             Settings
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 transition-colors"
+            className="flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-sm font-semibold text-white transition-all"
+            style={{ background: '#0A84FF' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#409CFF' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#0A84FF' }}
           >
             <Plus size={14} />
             Add
@@ -75,34 +87,42 @@ export default function App() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="flex w-80 flex-shrink-0 flex-col border-r border-slate-800 overflow-hidden">
+        <aside
+          className="flex w-80 flex-shrink-0 flex-col overflow-hidden"
+          style={{ borderRight: '1px solid rgba(255,255,255,0.07)', background: '#1C1C1E' }}
+        >
           {/* Sidebar tabs */}
-          <div className="flex border-b border-slate-800">
-            <button
-              onClick={() => setSidebarTab('summary')}
-              className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                sidebarTab === 'summary'
-                  ? 'border-b-2 border-blue-500 text-blue-400'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Summary
-            </button>
-            <button
-              onClick={() => setSidebarTab('transactions')}
-              className={`flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
-                sidebarTab === 'transactions'
-                  ? 'border-b-2 border-blue-500 text-blue-400'
-                  : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Transactions
-              {transactions.length > 0 && (
-                <span className="ml-1.5 rounded-full bg-slate-700 px-1.5 py-0.5 text-slate-400">
-                  {transactions.length}
-                </span>
-              )}
-            </button>
+          <div
+            className="flex"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            {(['summary', 'transactions'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSidebarTab(tab)}
+                className="flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-colors relative"
+                style={{
+                  color: sidebarTab === tab ? '#0A84FF' : '#636366',
+                  borderBottom: sidebarTab === tab ? '2px solid #0A84FF' : '2px solid transparent',
+                }}
+              >
+                {tab === 'transactions' ? (
+                  <>
+                    Transactions
+                    {transactions.length > 0 && (
+                      <span
+                        className="ml-1.5 rounded-full px-1.5 py-0.5"
+                        style={{ background: '#3A3A3C', color: '#8E8E93', fontSize: 10 }}
+                      >
+                        {transactions.length}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  'Summary'
+                )}
+              </button>
+            ))}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
@@ -130,10 +150,16 @@ export default function App() {
           </div>
 
           {sidebarTab === 'summary' && hasData && (
-            <div className="border-t border-slate-800 p-4">
+            <div className="p-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
               <button
                 onClick={() => setShowForm(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-700 py-2.5 text-sm text-slate-500 hover:border-blue-500/50 hover:text-blue-400 transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm transition-colors"
+                style={{
+                  border: '1px dashed rgba(255,255,255,0.12)',
+                  color: '#636366',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0A84FF55'; e.currentTarget.style.color = '#0A84FF' }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#636366' }}
               >
                 <Plus size={14} />
                 Add transaction
@@ -152,16 +178,20 @@ export default function App() {
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-              <div className="rounded-2xl bg-slate-800/50 p-8 max-w-sm">
-                <BarChart3 size={40} className="mx-auto mb-4 text-slate-600" />
-                <h2 className="mb-2 text-lg font-semibold text-white">Your timeline awaits</h2>
-                <p className="mb-6 text-sm text-slate-400">
+              <div
+                className="rounded-3xl p-10 max-w-sm"
+                style={{ background: '#1C1C1E', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <BarChart3 size={40} className="mx-auto mb-4" style={{ color: '#3A3A3C' }} />
+                <h2 className="mb-2 text-lg font-semibold">Your timeline awaits</h2>
+                <p className="mb-6 text-sm" style={{ color: '#8E8E93' }}>
                   Add your salary and recurring payments to see your cash flow visualized across
                   time.
                 </p>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-white transition-all"
+                  style={{ background: '#0A84FF' }}
                 >
                   <Plus size={15} />
                   Add first transaction
